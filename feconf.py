@@ -54,6 +54,7 @@ IDEA_CONTRIBUTORS = [
 # The fourth element is optional. Note that the filename omits the .yaml suffix.
 # The images are in /data/images.
 DEMO_EXPLORATIONS = [
+    ('tar', 'Missions - Tar', 'Tar'),
     ('welcome', 'Welcome to Oppia!', 'Welcome'),
     ('pitch', 'Pitch Perfect', 'Music', 'pitch.png'),
     ('counting', 'Three Balls', 'Mathematics', 'counting.png'),
@@ -84,6 +85,9 @@ elif PLATFORM == 'django':
 
 # The directory containing data files for tests.
 TESTS_DATA_DIR = 'core/tests/data'
+
+# The directory containing data files for explorations
+DATA_DIR = 'data/files/'
 
 # The directories containing sample explorations and widgets.
 SAMPLE_EXPLORATIONS_DIR = 'data/explorations'
