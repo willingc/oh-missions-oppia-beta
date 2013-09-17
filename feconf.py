@@ -55,15 +55,6 @@ IDEA_CONTRIBUTORS = [
 # The images are in /data/images.
 DEMO_EXPLORATIONS = [
     ('tar', 'Missions - Tar', 'Tar'),
-    ('welcome', 'Welcome to Oppia!', 'Welcome'),
-    ('pitch', 'Pitch Perfect', 'Music', 'pitch.png'),
-    ('counting', 'Three Balls', 'Mathematics', 'counting.png'),
-    ('boot_verbs', 'Boot Verbs', 'Languages', 'boot_verbs.png'),
-    ('hola', '¡Hola!', 'Languages'),
-    ('landmarks', 'Landmarks', 'Geography'),
-    ('adventure', 'Parametrized Adventure', 'Interactive Fiction'),
-    ('root_linear_coefficient_theorem', 'Root Linear Coefficient Theorem', 'Mathematics'),
-    ('binary_search', 'The Lazy Magician', 'Mathematics'),
 ]
 
 # Whether to unconditionally log info messages.
