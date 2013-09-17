@@ -1,4 +1,4 @@
-var tarFileInputWidget = angular.module('tarFileInputWidget', []);
+var tarFileInputWidget = angular.module('tarFileInputWidget', ['ngSanitize']);
 
 // Sets the AngularJS interpolators as <[ and ]>, to not conflict with Django.
 tarFileInputWidget.config(function($interpolateProvider) {
@@ -7,6 +7,9 @@ tarFileInputWidget.config(function($interpolateProvider) {
 });
 
 function TarFileReadInput($scope) {
+  $scope.hintPlaceholder = GLOBALS.hintPlaceholder;
+  $scope.lowHint = GLOBALS.lowHint;
+  $scope.highHint = GLOBALS.highHint;
   $scope.answer = '';
   TarFileReadInput.prototype.submitAnswer = function(element) {
     var theFile = element.files[0];
@@ -22,6 +25,9 @@ function TarFileReadInput($scope) {
 
     var form = new FormData();
     form.append('file', theFile);
+
+    $('#processing-modal > .modal-body > p').html("Processing uploaded file: " + theFile.name);
+    $('#processing-modal').modal('show');
 
     $.ajax({
       url: '/filereadhandler',
@@ -45,6 +51,7 @@ function TarFileReadInput($scope) {
         }
       }
     });
+    $('#processing-modal').modal('hide');
   };
 };
 
