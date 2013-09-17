@@ -51,7 +51,6 @@ function TarFileReadInput($scope) {
         }
       }
     });
-    $('#processing-modal').modal('hide');
   };
 };
 
