@@ -27,7 +27,18 @@ class ValueGeneratorUnitTests(test_utils.GenericTestBase):
 
     def test_copier(self):
         generator = generators.Copier()
-        self.assertEqual(generator.generate_value(**{'value': 'a'}), 'a')
+        self.assertEqual(generator.generate_value({}, **{'value': 'a'}), 'a')
+        self.assertEqual(generator.generate_value(
+            {}, **{'value': 'a', 'parse_with_jinja': False}), 'a')
+        self.assertEqual(generator.generate_value(
+            {}, **{'value': '{{a}}', 'parse_with_jinja': False}), '{{a}}')
+        self.assertEqual(generator.generate_value(
+            {'a': 'b'}, **{'value': '{{a}}', 'parse_with_jinja': True}), 'b')
+
+    def test_random_selector(self):
+        generator = generators.RandomSelector()
+        self.assertIn(generator.generate_value(
+            {}, **{'list_of_values': ['a', 'b', 'c']}), ['a', 'b', 'c'])
 
     def test_restricted_copier(self):
         with self.assertRaises(TypeError):
@@ -38,9 +49,9 @@ class ValueGeneratorUnitTests(test_utils.GenericTestBase):
 
         generator = generators.RestrictedCopier(['a', 'b'])
 
-        self.assertEqual(generator.generate_value('a'), 'a')
+        self.assertEqual(generator.generate_value({}, 'a'), 'a')
         with self.assertRaisesRegexp(Exception, 'Value must be one of'):
-            generator.generate_value('c')
+            generator.generate_value({}, 'c')
 
     def test_range_restricted_copier(self):
         with self.assertRaises(TypeError):
@@ -53,11 +64,11 @@ class ValueGeneratorUnitTests(test_utils.GenericTestBase):
 
         generator = generators.RangeRestrictedCopier(-90, 90.5)
 
-        self.assertEqual(generator.generate_value(-88), -88)
-        self.assertEqual(generator.generate_value(90.25), 90.25)
+        self.assertEqual(generator.generate_value({}, -88), -88)
+        self.assertEqual(generator.generate_value({}, 90.25), 90.25)
         with self.assertRaisesRegexp(
                 Exception, 'Value must be between -90 and 90.5, inclusive;'):
-            generator.generate_value(-90.1)
+            generator.generate_value({}, -90.1)
         with self.assertRaisesRegexp(
                 Exception, 'Value must be between -90 and 90.5, inclusive;'):
-            generator.generate_value(90.51)
+            generator.generate_value({}, 90.51)

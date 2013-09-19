@@ -1,5 +1,7 @@
 default_skin: conversation_v1
-param_specs: []
+param_changes: []
+param_specs: {}
+schema_version: 1
 states:
 - content:
   - type: text
@@ -7,15 +9,15 @@ states:
   name: Welcome!
   param_changes: []
   widget:
+    customization_args: {}
     handlers:
     - name: submit
       rule_specs:
-      - dest: Unpack!
+      - definition:
+          rule_type: default
+        dest: Unpack!
         feedback: []
-        inputs: {}
-        name: Default
         param_changes: []
-    customization_args: {}
     sticky: false
     widget_id: Continue
 - content:
@@ -24,23 +26,26 @@ states:
   name: Unpack!
   param_changes: []
   widget:
+    customization_args: {}
     handlers:
     - name: submit
       rule_specs:
-      - dest: Pack!
+      - definition:
+          inputs:
+            filepath: 'learn_tar/ghello.c'
+          name: MatchesBase64EncodedFile
+          rule_type: atomic
+          subject: answer
+        dest: Pack!
         feedback:
         - Yes! You got it right.
-        inputs:
-          filepath: 'learn_tar/ghello.c'
-        name: MatchesBase64EncodedFile
         param_changes: []
-      - dest: Unpack!
+      - definition:
+          rule_type: default
+        dest: Unpack!
         feedback:
         - Uh oh! That wasn't quite right. Have another go.
-        inputs: {}
-        name: Default
         param_changes: []
-    customization_args: {}
     sticky: false
     widget_id: FileReadInput
 - content:
@@ -49,55 +54,61 @@ states:
   name: Pack!
   param_changes: []
   widget:
+    customization_args: {}
     handlers:
     - name: submit
       rule_specs:
-      - dest: Pack!
+      - definition:
+          inputs: {}
+          name: ChecksWrapperDirPresence
+          rule_type: atomic
+          subject: answer
+        dest: Pack!
         feedback:
         - Wrapper directory not present.
-        inputs: {}
-        name: ChecksWrapperDirPresence
         param_changes: []
-      - dest: Pack!
+      - definition:
+          inputs:
+            x: 'myproject-0.1'
+          name: ChecksWrapperDirName
+          rule_type: atomic
+          subject: answer
+        dest: Pack!
         feedback:
         - Wrapper directory name is incorrect.
-        inputs:
-          x: 'myproject-0.1'
-        name: ChecksWrapperDirName
         param_changes: []
-      - dest: Pack!
-        feedback:
-        - An unexpected file present. You can read about how to remove it <a href="/wiki/Tar_hints_for_Mac_OS_X_users">on our wiki</a>.
-        inputs: {}
-        name: HasAppleDoubleFile
-        param_changes: []
-      - dest: Pack!
-        feedback:
-        - An unexpected file present.
-        inputs:
-          expected_files: ["myproject-0.1", "myproject-0.1/hello.c", "myproject-0.1/Makefile"]
-        name: HasUnexpectedFile
-        param_changes: []
-      - dest: Pack!
-        feedback:
-        - Archive does not contain all expected files
-        inputs:
-          expected_files: ["myproject-0.1", "myproject-0.1/hello.c", "myproject-0.1/Makefile"]
-        name: MissingExpectedFile
-        param_changes: []
-      - dest: Pack!
-        feedback:
-        - A file has incorrect contents. 
-        inputs:
-          file_list: ['hello.c', 'Makefile'] 
-        name: HasUnexpectedContent
-        param_changes: []
-      - dest: END
+      # - dest: Pack!
+      #   feedback:
+      #   - An unexpected file present. You can read about how to remove it <a href="/wiki/Tar_hints_for_Mac_OS_X_users">on our wiki</a>.
+      #   inputs: {}
+      #   name: HasAppleDoubleFile
+      #   param_changes: []
+      # - dest: Pack!
+      #   feedback:
+      #   - An unexpected file present.
+      #   inputs:
+      #     expected_files: ["myproject-0.1", "myproject-0.1/hello.c", "myproject-0.1/Makefile"]
+      #   name: HasUnexpectedFile
+      #   param_changes: []
+      # - dest: Pack!
+      #   feedback:
+      #   - Archive does not contain all expected files
+      #   inputs:
+      #     expected_files: ["myproject-0.1", "myproject-0.1/hello.c", "myproject-0.1/Makefile"]
+      #   name: MissingExpectedFile
+      #   param_changes: []
+      # - dest: Pack!
+      #   feedback:
+      #   - A file has incorrect contents. 
+      #   inputs:
+      #     file_list: ['hello.c', 'Makefile'] 
+      #   name: HasUnexpectedContent
+      #   param_changes: []
+      - definition:
+          rule_type: default
+        dest: END
         feedback:
         - Yay! you did it.
-        inputs: {}
-        name: Default
         param_changes: []
-    customization_args: {}
     sticky: false
     widget_id: TarFileReadInput

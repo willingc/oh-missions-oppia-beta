@@ -61,10 +61,11 @@ class ExplorationHandler(base.BaseHandler):
         except Exception as e:
             raise self.PageNotFoundException(e)
 
+        init_params = exp_services.get_init_params(exploration_id)
         reader_params = exp_services.update_with_state_params(
             exploration_id,
             exploration.init_state_id,
-            reader_params={}
+            reader_params=init_params
         )
 
         init_state = exploration.init_state
@@ -247,8 +248,5 @@ class RandomExplorationPage(base.BaseHandler):
     def get(self):
         """Handles GET requests."""
         explorations = exp_services.get_public_explorations()
-
-        # Skip the first exploration; users have seen it on the main page.
-        selected_exploration = utils.get_random_choice(explorations[1:])
-
+        selected_exploration = utils.get_random_choice(explorations)
         self.redirect('/learn/%s' % selected_exploration.id)

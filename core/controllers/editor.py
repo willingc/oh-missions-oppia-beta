@@ -20,7 +20,10 @@ from core.controllers import base
 from core.domain import exp_services
 from core.domain import param_domain
 from core.domain import stats_services
+from core.domain import value_generators_domain
 import utils
+
+import jinja2
 
 EDITOR_MODE = 'editor'
 # The maximum number of exploration history snapshots to show by default.
@@ -35,8 +38,16 @@ class ExplorationPage(base.BaseHandler):
     @base.require_editor
     def get(self, exploration_id):
         """Handles GET requests."""
+        all_value_generators = (
+            value_generators_domain.Registry.get_all_generator_classes())
+
+        value_generators_js = ''
+        for gid, generator_cls in all_value_generators.iteritems():
+            value_generators_js += generator_cls.get_js_template()
+
         self.values.update({
             'nav_mode': EDITOR_MODE,
+            'value_generators_js': jinja2.utils.Markup(value_generators_js)
         })
         self.render_template('editor/editor_exploration.html')
 
@@ -65,9 +76,8 @@ class ExplorationHandler(base.BaseHandler):
             'title': exploration.title,
             'editors': exploration.editor_ids,
             'states': state_list,
-            # TODO(sll): Update this name in the frontend to param_specs.
-            'parameters': [param_spec.to_dict()
-                           for param_spec in exploration.param_specs],
+            'param_changes': exploration.param_change_dicts,
+            'param_specs': exploration.param_specs_dict,
             'version': exploration.version,
             # Add information about the most recent versions.
             'snapshots': exp_services.get_exploration_snapshots_metadata(
@@ -127,8 +137,8 @@ class ExplorationHandler(base.BaseHandler):
         title = self.payload.get('title')
         image_id = self.payload.get('image_id')
         editors = self.payload.get('editors')
-        # TODO(sll): Update this name in the frontend to param_specs.
-        param_specs = self.payload.get('parameters')
+        param_specs = self.payload.get('param_specs')
+        param_changes = self.payload.get('param_changes')
 
         if is_public:
             exploration.is_public = True
@@ -147,10 +157,15 @@ class ExplorationHandler(base.BaseHandler):
             else:
                 raise self.UnauthorizedUserException(
                     'Only the exploration owner can add new collaborators.')
-        if param_specs:
-            exploration.param_specs = [
-                param_domain.ParamSpec.from_dict(param_spec)
-                for param_spec in param_specs
+        if param_specs is not None:
+            exploration.param_specs = {
+                ps_name: param_domain.ParamSpec.from_dict(ps_val)
+                for (ps_name, ps_val) in param_specs.iteritems()
+            }
+        if param_changes is not None:
+            exploration.param_changes = [
+                param_domain.ParamChange.from_dict(param_change)
+                for param_change in param_changes
             ]
 
         exp_services.save_exploration(self.user_id, exploration)

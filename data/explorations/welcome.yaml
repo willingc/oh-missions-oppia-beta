@@ -1,5 +1,7 @@
 default_skin: conversation_v1
-param_specs: []
+param_changes: []
+param_specs: {}
+schema_version: 1
 states:
 - content:
   - type: text
@@ -12,37 +14,43 @@ states:
   name: Welcome!
   param_changes: []
   widget:
-    handlers:
-    - name: submit
-      rule_specs:
-      - dest: What language
-        feedback:
-        - Yes!
-        inputs:
-          x: 0
-        name: Equals
-        param_changes: []
-      - dest: Welcome!
-        feedback:
-        - Actually, I don't know of any such characters, so I must confess to making
-          that choice up. Have another go?
-        inputs:
-          x: 2
-        name: Equals
-        param_changes: []
-      - dest: What language
-        feedback:
-        - Hm, it certainly looks like it! But it's actually a word from a different
-          language.
-        inputs: {}
-        name: Default
-        param_changes: []
     customization_args:
       choices:
         value:
         - It's translated from a different language.
         - It's a nonsense word that someone made up.
         - It's the name of a popular cartoon character.
+    handlers:
+    - name: submit
+      rule_specs:
+      - definition:
+          inputs:
+            x: 0
+          name: Equals
+          rule_type: atomic
+          subject: answer
+        dest: What language
+        feedback:
+        - Yes!
+        param_changes: []
+      - definition:
+          inputs:
+            x: 2
+          name: Equals
+          rule_type: atomic
+          subject: answer
+        dest: Welcome!
+        feedback:
+        - Actually, I don't know of any such characters, so I must confess to making
+          that choice up. Have another go?
+        param_changes: []
+      - definition:
+          rule_type: default
+        dest: What language
+        feedback:
+        - Hm, it certainly looks like it! But it's actually a word from a different
+          language.
+        param_changes: []
     sticky: false
     widget_id: MultipleChoiceInput
 - content:
@@ -51,128 +59,155 @@ states:
   name: Estimate 100
   param_changes: []
   widget:
+    customization_args: {}
     handlers:
     - name: submit
       rule_specs:
-      - dest: Numeric input
+      - definition:
+          inputs:
+            x: 100.0
+          name: Equals
+          rule_type: atomic
+          subject: answer
+        dest: Numeric input
         feedback:
         - Yes! So 11 times 11 must be bigger. Let's try again.
-        inputs:
-          x: 100.0
-        name: Equals
         param_changes: []
-      - dest: Estimate 100
+      - definition:
+          rule_type: default
+        dest: Estimate 100
         feedback:
         - No; try again. Remember, multiplication by ten can be done by just adding
           a zero at the end.
-        inputs: {}
-        name: Default
         param_changes: []
-    customization_args: {}
     sticky: false
     widget_id: NumericInput
 - content:
   - type: text
-    value: 'You might want to build something more complicated than that, though.
-      The good news is that you can integrate your own interactive questions into
-      Oppia!<div><br></div><div>For example, have a go at this custom activity that
-      uses an interaction built by Phil Wagner:</div><hr><h4>Goal: Listen to the pitch
-      played, then match it by moving the note on the musical staff.</h4>Instructions:<ol><li>Click
-      the black circle representing the note. It should turn red.</li><li>Move the
-      note up and down using the <span style="font-weight: bold;">up</span>&nbsp;and
-      <span style="font-weight: bold;">down</span>&nbsp;arrow keys.</li> </ol>'
-  name: Music widget
+    value: You might want to build something more complicated than that, though. The
+      good news is that you can integrate your own interactive questions into Oppia!<div><br>Where
+      would people say the word 'Oppia'? Well, in Finland, and probably in its capital,
+      Helsinki. Can you find Helsinki on a map of the world?</div><ol> </ol>
+  name: Finding Helsinki
   param_changes: []
   widget:
+    customization_args:
+      latitude:
+        value: 60.1708
+      longitude:
+        value: 24.9375
+      zoom:
+        value: 2
     handlers:
     - name: submit
       rule_specs:
-      - dest: Things you can do
+      - definition:
+          inputs:
+            d: 1.0
+            p:
+            - 60.1708
+            - 24.9375
+          name: Within
+          rule_type: atomic
+          subject: answer
+        dest: Things you can do
         feedback:
-        - That's right!
-        inputs:
-          x: B4
-        name: Equals
+        - Hooray, you found it!
         param_changes: []
-      - dest: Music widget
+      - definition:
+          inputs:
+            d: 10.0
+            p:
+            - 60.1708
+            - 24.9375
+          name: Within
+          rule_type: atomic
+          subject: answer
+        dest: Finding Helsinki
         feedback:
-        - I think the original note is lower.
-        inputs:
-          x: B4
-        name: IsGreaterThan
+        - Close, but not quite. Helsinki is on the south coast of Finland; try looking
+          there.
+        - That's not too far, but you can get closer! Try looking on the south coast
+          of Finland.
         param_changes: []
-      - dest: Music widget
+      - definition:
+          rule_type: default
+          subject: answer
+        dest: Finding Helsinki
         feedback:
-        - Actually, the original note sounds higher. Try comparing both pitches and
-          listening carefully to the difference.
-        inputs:
-          x: B4
-        name: IsLessThan
+        - That is rather far away! Try zooming into Finland.
         param_changes: []
-      - dest: Music widget
-        feedback: []
-        inputs: {}
-        name: Default
-        param_changes: []
-    customization_args:
-      noteToGuess:
-        value: B4
     sticky: true
-    widget_id: MusicStaff
+    widget_id: InteractiveMap
 - content:
   - type: text
     value: <div>Let $x = 11$. What is the value of $x^2$?<br></div>
   name: Numeric input
   param_changes: []
   widget:
+    customization_args: {}
     handlers:
     - name: submit
       rule_specs:
-      - dest: Music widget
+      - definition:
+          inputs:
+            x: 121.0
+          name: Equals
+          rule_type: atomic
+          subject: answer
+        dest: Finding Helsinki
         feedback:
         - 'Yes, that''s correct: 11 times 11 is 121.'
-        inputs:
-          x: 121.0
-        name: Equals
         param_changes: []
-      - dest: Estimate 100
+      - definition:
+          inputs:
+            x: 121.0
+          name: IsLessThan
+          rule_type: atomic
+          subject: answer
+        dest: Estimate 100
         feedback:
         - Nope. Let's make a quick estimate.
-        inputs:
-          x: 121.0
-        name: IsLessThan
         param_changes: []
-      - dest: Numeric input
+      - definition:
+          inputs:
+            tol: 9.0
+            x: 121.0
+          name: IsWithinTolerance
+          rule_type: atomic
+          subject: answer
+        dest: Numeric input
         feedback:
         - You are actually very close. Think about the last digit of the answer; what
           must it be? Then you should be able to get it in one or two more goes.
-        inputs:
-          tol: 9.0
-          x: 121.0
-        name: IsWithinTolerance
         param_changes: []
-      - dest: Numeric input
+      - definition:
+          inputs:
+            x: 121.0
+          name: IsGreaterThan
+          rule_type: atomic
+          subject: answer
+        dest: Numeric input
         feedback:
         - That's too high! Try guessing lower.
-        inputs:
-          x: 121.0
-        name: IsGreaterThan
         param_changes: []
-      - dest: Numeric input
+      - definition:
+          inputs:
+            x: 121.0
+          name: IsLessThan
+          rule_type: atomic
+          subject: answer
+        dest: Numeric input
         feedback:
         - That's not large enough. Try guessing higher?
-        inputs:
-          x: 121.0
-        name: IsLessThan
         param_changes: []
-      - dest: Numeric input
+      - definition:
+          rule_type: default
+        dest: Numeric input
         feedback:
         - If you got here, something's gone a bit wrong with this exploration. Sorry
           about that. If you're wondering, the answer is 96721.
-        inputs: {}
-        name: Default
         param_changes: []
-    customization_args: {}
     sticky: false
     widget_id: NumericInput
 - content:
@@ -189,15 +224,15 @@ states:
   name: Things you can do
   param_changes: []
   widget:
+    customization_args: {}
     handlers:
     - name: submit
       rule_specs:
-      - dest: END
+      - definition:
+          rule_type: default
+        dest: END
         feedback: []
-        inputs: {}
-        name: Default
         param_changes: []
-    customization_args: {}
     sticky: false
     widget_id: Continue
 - content:
@@ -207,19 +242,29 @@ states:
   name: What language
   param_changes: []
   widget:
+    customization_args: {}
     handlers:
     - name: submit
       rule_specs:
-      - dest: What language
+      - definition:
+          inputs:
+            x: greek
+          name: Equals
+          rule_type: atomic
+          subject: answer
+        dest: What language
         feedback:
         - That's a pretty good guess. Several Greek words end with 'ia', such as 'thexia'
           and 'paralia'. But Oppia is not a Greek word, though it's from a country
           that's not too far away. Try again?
-        inputs:
-          x: greek
-        name: Equals
         param_changes: []
-      - dest: What language
+      - definition:
+          inputs:
+            x: roman
+          name: Contains
+          rule_type: atomic
+          subject: answer
+        dest: What language
         feedback:
         - There is indeed an ancient Roman law named Lex Oppia, which was instituted
           by Gaius Oppius, a friend of Julius Caesar. But this isn't where our word
@@ -227,11 +272,14 @@ states:
           for. (Please feel free to search on the Web for the answer, by the way;
           this is admittedly a factual question which not many people will know the
           answer to.)
-        inputs:
-          x: roman
-        name: Contains
         param_changes: []
-      - dest: What language
+      - definition:
+          inputs:
+            x: latin
+          name: Contains
+          rule_type: atomic
+          subject: answer
+        dest: What language
         feedback:
         - There is indeed an ancient Roman law named Lex Oppia, which was instituted
           by Gaius Oppius, a friend of Julius Caesar. But this isn't where our word
@@ -239,95 +287,118 @@ states:
           for. (Please feel free to search on the Web for the answer, by the way;
           this is admittedly a factual question which not many people will know the
           answer to.)
-        inputs:
-          x: latin
-        name: Contains
         param_changes: []
-      - dest: What language
+      - definition:
+          inputs:
+            x: Swedish
+          name: Equals
+          rule_type: atomic
+          subject: answer
+        dest: What language
         feedback:
         - That's not it, alas. But you're very close! Oppia is indeed a Nordic word,
           but it's not from Sweden.
-        inputs:
-          x: Swedish
-        name: Equals
         param_changes: []
-      - dest: What language
+      - definition:
+          inputs:
+            x: translate oppia
+          name: Contains
+          rule_type: atomic
+          subject: answer
+        dest: What language
         feedback:
         - 'Oops, I was unclear, sorry. I meant: type ''translate oppia'' into a search
           engine, such as Google.'
-        inputs:
-          x: translate oppia
-        name: Contains
         param_changes: []
-      - dest: What language
+      - definition:
+          inputs:
+            x: finish
+          name: Equals
+          rule_type: atomic
+          subject: answer
+        dest: What language
         feedback:
         - Not quite; that's actually the opposite of 'start'. Check your spelling!
-        inputs:
-          x: finish
-        name: Equals
         param_changes: []
-      - dest: Numeric input
+      - definition:
+          inputs:
+            x: finnish
+          name: Equals
+          rule_type: atomic
+          subject: answer
+        dest: Numeric input
         feedback:
         - 'Yes! Oppia is the Finnish word for learn. As you can see, you''re not limited
           to multiple-choice questions here. For example, you could ask for numeric
           answers, text answers, sets of strings, and so on. You can even write your
           own types of questions. Here is a question that takes numeric input:'
-        inputs:
-          x: finnish
-        name: Equals
         param_changes: []
-      - dest: What language
+      - definition:
+          inputs:
+            x: finnish
+          name: FuzzyEquals
+          rule_type: atomic
+          subject: answer
+        dest: What language
         feedback:
         - I think your spelling isn't quite right; you might want to check it.
-        inputs:
-          x: finnish
-        name: FuzzyEquals
         param_changes: []
-      - dest: What language
+      - definition:
+          inputs:
+            x: 'yes'
+          name: Equals
+          rule_type: atomic
+          subject: answer
+        dest: What language
         feedback:
         - Great, glad to hear that. Which language is it?
-        inputs:
-          x: 'yes'
-        name: Equals
         param_changes: []
-      - dest: What language
+      - definition:
+          inputs:
+            x: German
+          name: Contains
+          rule_type: atomic
+          subject: answer
+        dest: What language
         feedback:
         - Nein! Ahem... no, it's not German. But it's a European language. From a
           place that's colder than Germany. Have another go?
-        inputs:
-          x: German
-        name: Contains
         param_changes: []
-      - dest: What language
+      - definition:
+          inputs:
+            x: French
+          name: Contains
+          rule_type: atomic
+          subject: answer
+        dest: What language
         feedback:
         - 'Mais non! Well, no, it''s not French. But it''s pretty close. Here, I''ll
           give you a hint: Oppia is a word from one of the Scandinavian countries.
           Can you guess which one?'
-        inputs:
-          x: French
-        name: Contains
         param_changes: []
-      - dest: Numeric input
+      - definition:
+          inputs:
+            x: suomi
+          name: Equals
+          rule_type: atomic
+          subject: answer
+        dest: Numeric input
         feedback:
         - 'Yes! Suomi is Finnish for Finnish and Oppia is the Finnish word for learn.
           As you can see, you''re not limited to multiple-choice questions here. For
           example, you could ask for numeric answers, text answers, sets of strings,
           and so on. You can even write your own types of questions. Here is a question
           that takes numeric input:'
-        inputs:
-          x: suomi
-        name: Equals
         param_changes: []
-      - dest: What language
+      - definition:
+          rule_type: default
+        dest: What language
         feedback:
         - Sorry, nope, we didn't get it from {{answer}}. But you can find out lots
           of things on the Web. Why not try doing a search for [translate oppia] on
           your favorite search engine?
         - Sorry, nope, we didn't get it from {{answer}}. Here's a hint, though. It's
           a European language you're looking for.
-        inputs: {}
-        name: Default
         param_changes: []
-    customization_args: {}
     sticky: false
     widget_id: TextInput

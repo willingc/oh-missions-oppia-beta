@@ -29,6 +29,10 @@ import test_utils
 import utils
 
 
+# Sentinel indicating that a value can take any type.
+ANY_TYPE = 1
+
+
 class DataUnitTest(test_utils.GenericTestBase):
     """Base class for testing data and extension files."""
 
@@ -44,7 +48,8 @@ class DataUnitTest(test_utils.GenericTestBase):
             self.assertEqual(
                 len(item), 2, msg='Schema %s is invalid.' % dict_schema)
             self.assertTrue(isinstance(item[0], str))
-            self.assertTrue(isinstance(item[1], type))
+            if item[1] != ANY_TYPE:
+                self.assertTrue(isinstance(item[1], type))
 
         TOP_LEVEL_KEYS = [item[0] for item in dict_schema]
         self.assertItemsEqual(
@@ -52,6 +57,8 @@ class DataUnitTest(test_utils.GenericTestBase):
             msg='Dict %s should conform to schema %s.' % (adict, dict_schema))
 
         for item in dict_schema:
+            if item[1] == ANY_TYPE:
+                continue
             self.assertTrue(
                 isinstance(adict[item[0]], item[1]),
                 'Value \'%s\' for key \'%s\' is not of type %s in:\n\n %s' % (
@@ -83,7 +90,8 @@ class ExplorationDataUnitTests(DataUnitTest):
             self.assertIn(content_item['type'], ['text', 'image', 'video'])
 
         PARAM_CHANGES_SCHEMA = [
-            ('name', basestring), ('values', list), ('obj_type', basestring)]
+            ('name', basestring), ('generator_id', basestring),
+            ('customization_args', ANY_TYPE)]
         for param_change in state_dict['param_changes']:
             self.verify_dict_keys_and_types(param_change, PARAM_CHANGES_SCHEMA)
             # TODO(sll): Test that the elements of 'values' are of the correct
@@ -103,8 +111,8 @@ class ExplorationDataUnitTests(DataUnitTest):
 
             for rule in handler['rule_specs']:
                 RULE_SCHEMA = [
-                    ('dest', basestring), ('feedback', list), ('inputs', dict),
-                    ('name', basestring), ('param_changes', list)
+                    ('dest', basestring), ('feedback', list),
+                    ('definition', dict), ('param_changes', list)
                 ]
                 self.verify_dict_keys_and_types(rule, RULE_SCHEMA)
 
@@ -130,6 +138,8 @@ class ExplorationDataUnitTests(DataUnitTest):
                         param_change, PARAM_CHANGES_SCHEMA)
                     # TODO(sll): Test that the elements of 'values' are of the
                     # correct type.
+
+                # TODO(sll): Add validation for the rule definition.
 
         for wp_name, wp_value in (
                 state_dict['widget']['customization_args'].iteritems()):
@@ -238,13 +248,22 @@ class ExplorationDataUnitTests(DataUnitTest):
 
     def verify_exploration_dict(self, exploration_dict):
         """Verifies an exploration dict."""
-        EXPLORATION_SCHEMA = [('param_specs', list), ('states', list),
-                              ('default_skin', basestring)]
+        EXPLORATION_SCHEMA = [
+            ('param_specs', dict), ('states', list),
+            ('default_skin', basestring), ('param_changes', list),
+            ('schema_version', int)
+        ]
         self.verify_dict_keys_and_types(exploration_dict, EXPLORATION_SCHEMA)
 
-        PARAMETER_SCHEMA = [('name', basestring), ('obj_type', basestring)]
-        for param in exploration_dict['param_specs']:
-            self.verify_dict_keys_and_types(param, PARAMETER_SCHEMA)
+        # Each param spec value should be a dict of the form
+        # {obj_type: [STRING]}.
+        for param_key in exploration_dict['param_specs']:
+            ps_value = exploration_dict['param_specs'][param_key]
+            if len(ps_value) != 1 or ps_value.keys()[0] != 'obj_type':
+                raise Exception('Invalid param_spec dict: %s' % ps_value)
+
+            obj_class = obj_services.get_object_class(ps_value['obj_type'])
+            self.assertIsNotNone(obj_class)
 
         # Verify there is at least one state.
         self.assertTrue(exploration_dict['states'])
@@ -446,4 +465,4 @@ class WidgetDataUnitTests(DataUnitTest):
             # Check that the default customization args result in
             # parameters with the correct types.
             for param in widget.params:
-                param.value
+                widget._get_widget_param_instances({}, {})

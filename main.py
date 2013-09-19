@@ -40,7 +40,7 @@ class Error404Handler(base.BaseHandler):
     """Handles 404 errors."""
 
     def get(self):
-        """Redirects users to the main gallery if an invalid URL is entered.
+        """Raises a PageNotFoundException if an invalid URL is entered.
 
         For robots.txt requests, returns an empty response so that the error
         does not show up in the logs.
@@ -98,9 +98,8 @@ urls = [
         r'/imagehandler/<image_id>', resources.ImageHandler,
         'image_handler'),
     get_redirect_route(
-        r'/value_generator_templates/<generator_id>',
-        resources.GeneratorTemplateHandler,
-        'generator_template_handler'),
+        r'/value_generator_handler/<generator_id>',
+        resources.ValueGeneratorHandler, 'value_generator_handler'),
 
     get_redirect_route(r'/gallery', gallery.GalleryPage, 'gallery_page'),
     get_redirect_route(

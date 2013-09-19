@@ -92,7 +92,7 @@ OBJECT_TEMPLATES_DIR = 'extensions/objects/templates'
 SKINS_TEMPLATES_DIR = 'extensions/skins'
 FRONTEND_TEMPLATES_DIR = ('core/templates/dev/head' if DEV_MODE
                           else 'core/templates/prod/head')
-VALUE_GENERATOR_TEMPLATES_DIR = 'extensions/value_generators/templates'
+VALUE_GENERATORS_DIR = 'extensions/value_generators'
 
 # The id and name for the final state of an exploration.
 END_DEST = 'END'
@@ -115,7 +115,7 @@ NONINTERACTIVE_PREFIX = 'noninteractive'
 # The total number of non-interactive widgets. Used as a sanity check.
 NONINTERACTIVE_WIDGET_COUNT = 1
 # The total number of interactive widgets. Used as a sanity check.
-INTERACTIVE_WIDGET_COUNT = 9
+INTERACTIVE_WIDGET_COUNT = 10
 
 # Static file url to path mapping
 PATH_MAP = {

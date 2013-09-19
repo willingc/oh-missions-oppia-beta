@@ -165,8 +165,6 @@
       // A non-empty interactive_html means that the previous widget
       // is not sticky and should be replaced.
       $scope.reloadInteractiveIframe($scope.inputTemplate);
-    } else if ($scope.finished) {
-      $scope.reloadInteractiveIframe('');
     }
 
     // TODO(sll): Try and get rid of the "$digest already in progress" error here.
@@ -192,11 +190,11 @@
       }
     }
 
-    var currentScrollTop = $('body').scrollTop();
-    // TODO(sll): This should actually scroll to the location of last element in
-    // response log.
-    $('html,body').animate({scrollTop: Math.max(
-        $(document).height() - 1000, currentScrollTop + 50)});
+    if (document.getElementById('response')) {
+      $('html, body, iframe').animate(
+          {'scrollTop': document.getElementById('response').offsetTop},
+          'slow', 'swing');
+    }
   };
 
   window.addEventListener('message', receiveMessage, false);

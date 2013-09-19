@@ -22,6 +22,8 @@ import test_utils
 
 class BaseHandlerTest(test_utils.GenericTestBase):
 
+    TAGS = [test_utils.TestTags.SLOW_TEST]
+
     def test_that_no_get_results_in_500_error(self):
         """Test that no GET request results in a 500 error."""
 
@@ -31,14 +33,11 @@ class BaseHandlerTest(test_utils.GenericTestBase):
                 continue
             else:
                 url = route.template
-            url = re.sub('<([^/^:]+)>', 'abc012', url)
+            url = re.sub('<([^/^:]+)>', 'abc123', url)
 
             # Some of these will 404 or 302. This is expected.
-            try:
-                response = self.testapp.get(url)
-            except:
-                raise Exception('GET: %s' % url)
-            self.assertNotEqual(response.status_int, 500)
+            response = self.testapp.get(url, expect_errors=True)
+            self.assertIn(response.status_int, [200, 302, 404])
 
         # TODO(sll): Add similar tests for POST, PUT, DELETE.
         # TODO(sll): Set a self.payload attr in the BaseHandler for

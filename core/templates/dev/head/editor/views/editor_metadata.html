@@ -52,48 +52,6 @@
           </div>
         </div>
       </div>
-
-      <div>
-        <strong>Parameters</strong>
-        <ol>
-          <li ng-repeat="param in parameters">
-            <span class="oppia-editable-name"
-                ng-hide="editingParam == $index"
-                ng-click="startEditParam($index)">
-              <span ng-show="param.name"><b><[param.name]></b></span>
-              <span ng-show="param.description"><br><[param.description]></span>
-              <span ng-show="param.values"><br>initialize to one of: <[param.values]></span>
-            </span>
-          </li>
-        </ol>
-
-        <button type="button"
-                ng-hide="editingParam != null"
-                ng-click="startAddParam()">
-          Add Parameter
-        </button>
-
-        <br>
-
-        <div ng-show="editingParam != null">
-          <form novalidate class="oppia-form" name="newParameterForm" ng-submit="addParam(editingParam)">
-            Parameter name:
-            <input ng-model="tmpParamName" ui-select2="paramSelector"
-                   placeholder="Parameter Name" style="width:300px" required>
-            <br>
-            Description: <input type="text" ng-model="tmpParamDesc" ng-model-onblur
-                   placeholder="Parameter Description" style="width:300px">
-            <br>
-            Possible initial values:
-            <input ng-model="tmpParamValues" ui-select2="valueSelector" multiple
-                   placeholder="New Value(s)" style="width:300px">
-            <br>
-            <input type="submit" value="Save Changes"
-                   ng-disabled="newParameterForm.$invalid">
-            <button type="button" ng-click="resetParamInput()">Cancel</button>
-          </form>
-        </div>
-      </div>
     </div>
 
     <div class="span6">
@@ -132,6 +90,32 @@
       </div>
     </div>
   </div>
+  <br>
+
+  <div>
+    <h4>Parameters used in this exploration</h4>
+    <ol>
+      <li ng-repeat="(paramName, paramSpecValue) in paramSpecs">
+        <b><[paramName]></b> (<[paramSpecValue.obj_type]>)
+      </li>
+    </ol>
+
+    <br>
+
+    <h4>
+      Parameter initializations
+      <img class="oppia-help" src="/images/help.png"
+           ui-jq="tooltip"
+           title="This allows you to initialize the values of a reader's parameters before the reader begins the exploration.">
+    </h4>
+
+    <param-change-editor param-changes="explorationParamChanges"
+                         param-specs="paramSpecs"
+                         save-param-changes="saveExplorationParamChanges"
+                         add-exploration-param-spec="addExplorationParamSpec">
+    </param-change-editor>
+  </div>
+
   <br>
 
   <div ng-show="explorationSnapshots.length > 0">

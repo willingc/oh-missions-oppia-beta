@@ -22,7 +22,10 @@ should therefore be independent of the specific storage models used."""
 
 __author__ = 'Sean Lip'
 
+import re
+
 from core.domain import param_domain
+from core.domain import rule_domain
 from core.platform import models
 (base_models, exp_models,) = models.Registry.import_models([
     models.NAMES.base_model, models.NAMES.exploration
@@ -54,38 +57,45 @@ class RuleSpec(object):
 
     def to_dict(self):
         return {
-            'name': self.name,
-            'inputs': self.inputs,
+            'definition': self.definition,
             'dest': self.dest,
             'feedback': self.feedback,
             'param_changes': [param_change.to_dict()
-                              for param_change in self.param_changes],
+                              for param_change in self.param_changes]
         }
 
     @classmethod
     def from_dict(cls, rulespec_dict):
         return cls(
-            rulespec_dict['name'],
-            rulespec_dict['inputs'],
+            rulespec_dict['definition'],
             rulespec_dict['dest'],
             rulespec_dict['feedback'],
-            [param_domain.Parameter(
-                 param_change['name'], param_change['obj_type'],
-                 param_change['values'], param_change['description'])
-             for param_change in rulespec_dict['param_changes']]
+            [param_domain.ParamChange(
+                 param_change['name'], param_change['generator_id'],
+                 param_change['customization_args'])
+             for param_change in rulespec_dict['param_changes']],
         )
 
-    def __init__(self, name, inputs, dest, feedback, param_changes):
-        if not name:
-            raise ValueError('No name specified for rule spec')
+    def __init__(self, definition, dest, feedback, param_changes):
         if not dest:
             raise ValueError('No dest specified for rule spec')
 
-        # The name of the rule class.
-        # TODO(sll): Check that this actually corresponds to a rule class.
-        self.name = name
-        # Key-value map of parameters for the classification rule.
-        self.inputs = inputs or {}
+        # TODO(sll): Add validation for the rule definition.
+
+        # A dict specifying the rule definition. E.g.
+        #
+        #   {rule_type: 'default'}
+        #
+        # or
+        #
+        #   {
+        #     'rule_type': 'atomic',
+        #     'name': 'LessThan',
+        #     'subject': 'answer',
+        #     'inputs': {'x': 5}}
+        #   }
+        #
+        self.definition = definition
         # Id of the destination state.
         # TODO(sll): Check that this state is END_DEST or actually exists.
         self.dest = dest
@@ -93,13 +103,12 @@ class RuleSpec(object):
         self.feedback = feedback or []
         # Exploration-level parameter changes to make if this rule is
         # triggered.
-        # TODO(sll): Ensure the types for param_changes are consistent.
         self.param_changes = param_changes or []
 
     @property
     def is_default(self):
         """Returns True if this spec corresponds to the default rule."""
-        return self.name == 'Default'
+        return self.definition['rule_type'] == 'default'
 
     def get_feedback_string(self):
         """Returns a (possibly empty) string with feedback for this rule."""
@@ -107,16 +116,21 @@ class RuleSpec(object):
 
     def __str__(self):
         """Returns a string representation of a rule (for the stats log)."""
-        param_list = [
-            utils.to_ascii(self.inputs[key]) for key in self.inputs]
-        return '%s(%s)' % (self.name, ','.join(param_list))
+        if self.definition['rule_type'] == rule_domain.DEFAULT_RULE_TYPE:
+            return 'Default'
+        else:
+            # TODO(sll): Treat non-atomic rules too.
+            param_list = [utils.to_ascii(val) for
+                          (key, val) in self.definition['inputs'].iteritems()]
+            return '%s(%s)' % (self.definition['name'], ','.join(param_list))
 
     @classmethod
     def get_default_rule_spec(cls, state_id):
-        return RuleSpec('Default', {}, state_id, [], [])
+        return RuleSpec({'rule_type': 'default'}, state_id, [], [])
 
 
-DEFAULT_RULESPEC_STR = str(RuleSpec.get_default_rule_spec(feconf.END_DEST))
+DEFAULT_RULESPEC = RuleSpec.get_default_rule_spec(feconf.END_DEST)
+DEFAULT_RULESPEC_STR = str(DEFAULT_RULESPEC)
 
 
 class AnswerHandlerInstance(object):
@@ -144,8 +158,8 @@ class AnswerHandlerInstance(object):
 
         self.name = name
         self.rule_specs = [RuleSpec(
-            rule_spec.name, rule_spec.inputs, rule_spec.dest,
-            rule_spec.feedback, rule_spec.param_changes
+            rule_spec.definition, rule_spec.dest, rule_spec.feedback,
+            rule_spec.param_changes
         ) for rule_spec in rule_specs]
 
     @property
@@ -241,7 +255,7 @@ class State(object):
             state_id,
             state_dict.get('name', feconf.DEFAULT_STATE_NAME),
             [Content.from_dict(item) for item in state_dict['content']],
-            [param_domain.Parameter.from_dict(param)
+            [param_domain.ParamChange.from_dict(param)
              for param in state_dict['param_changes']],
             widget
         )
@@ -254,11 +268,10 @@ class State(object):
         # The content displayed to the reader in this state.
         self.content = [Content(item.type, item.value) for item in content]
         # Parameter changes associated with this state.
-        self.param_changes = [
-            param_domain.Parameter(
-                param_change.name, param_change.obj_type, param_change.values)
-            for param_change in param_changes
-        ]
+        self.param_changes = [param_domain.ParamChange(
+            param_change.name, param_change.generator.id,
+            param_change.customization_args)
+        for param_change in param_changes]
         # The interactive widget instance associated with this state. Set to be
         # the default widget if not explicitly specified by the caller.
         if widget is None:
@@ -276,9 +289,13 @@ class Exploration(object):
         self.category = exploration_model.category
         self.title = exploration_model.title
         self.state_ids = exploration_model.state_ids
-        self.param_specs = [
-            param_domain.ParamSpec.from_dict(param_spec_dict)
-            for param_spec_dict in exploration_model.param_specs]
+        self.param_specs = {
+            ps_name: param_domain.ParamSpec.from_dict(ps_val)
+            for (ps_name, ps_val) in exploration_model.param_specs.iteritems()
+        }
+        self.param_changes = [
+            param_domain.ParamChange.from_dict(param_change_dict)
+            for param_change_dict in exploration_model.param_changes]
         self.is_public = exploration_model.is_public
         self.image_id = exploration_model.image_id
         self.editor_ids = exploration_model.editor_ids
@@ -312,6 +329,12 @@ class Exploration(object):
                     'Invalid character %s in exploration title %s'
                     % (c, self.title))
 
+        for param_name in self.param_specs:
+            if not re.compile('^[a-zA-Z0-9]+$').match(param_name):
+                raise ValueError(
+                    'Only parameter names with characters in [a-zA-Z0-9] are '
+                    'accepted.')
+
     # Derived attributes of an exploration.
     @property
     def init_state_id(self):
@@ -331,9 +354,23 @@ class Exploration(object):
         return self.states[0]
 
     @property
-    def param_spec_dicts(self):
-        """A list of param specs, represented as JSONifiable Python dicts."""
-        return [param_spec.to_dict() for param_spec in self.param_specs]
+    def param_specs_dict(self):
+        """A dict of param specs, each represented as Python dicts."""
+        return {ps_name: ps_val.to_dict()
+                for (ps_name, ps_val) in self.param_specs.iteritems()}
+
+    @property
+    def param_change_dicts(self):
+        """A list of param changes, represented as JSONifiable Python dicts."""
+        return [param_change.to_dict() for param_change in self.param_changes]
+
+    def get_obj_type_for_param(self, param_name):
+        """Returns the obj_type for the given parameter."""
+        try:
+            return self.param_specs[param_name].obj_type
+        except:
+            raise Exception('Exploration %s has no parameter named %s' %
+                            (self.title, param_name))
 
     @property
     def is_demo(self):

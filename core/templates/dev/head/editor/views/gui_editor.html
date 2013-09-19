@@ -43,11 +43,12 @@
                title="This allows you to change any parameters associated with a reader who enters this state. A parameter can be accessed by typing {{'{{parameter_name}}'}} in the widget customization, rule definition or feedback fields.">
         </h4>
 
-        {% include 'editor/parameter_change.html' %}
+        <param-change-editor param-changes="stateParamChanges" param-specs="paramSpecs" save-param-changes="saveStateParamChanges" add-exploration-param-spec="addExplorationParamSpec">
+        </param-change-editor>
 
         <br>
 
-        <h4>
+        <h4 id="noninteractive">
           Non-Interactive Content
           <img class="oppia-help" src="/images/help.png"
                ui-jq="tooltip"

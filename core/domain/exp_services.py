@@ -49,6 +49,11 @@ import utils
 SUBMIT_HANDLER_NAME = 'submit'
 ADMIN_COMMITTER_ID = 'admin'
 
+# The current version of the exploration schema. If any backward-incompatible
+# changes are made to the exploration schema in the YAML definitions, this
+# version number must be changed and a migration process put in place.
+CURRENT_EXPLORATION_SCHEMA_VERSION = 1
+
 
 # Repository GET methods.
 def _get_exploration_memcache_key(exploration_id):
@@ -168,6 +173,7 @@ def get_unresolved_answers_for_default_rule(exploration_id, state_id):
 
 def export_state_to_verbose_dict(exploration_id, state_id):
     """Gets a state dict with rule descriptions and unresolved answers."""
+    exploration = get_exploration_by_id(exploration_id)
 
     state_dict = export_state_to_dict(exploration_id, state_id)
 
@@ -177,18 +183,19 @@ def export_state_to_verbose_dict(exploration_id, state_id):
     # TODO(sll): Fix the frontend and remove this line.
     state_dict['widget']['id'] = state_dict['widget']['widget_id']
 
-    state = get_state_by_id(exploration_id, state_id)
-
     for handler in state_dict['widget']['handlers']:
         for rule_spec in handler['rule_specs']:
-            if rule_spec['name'] == feconf.DEFAULT_RULE_NAME:
-                rule_spec['description'] = feconf.DEFAULT_RULE_NAME
-            else:
-                rule_spec['description'] = (
-                    widget_domain.Registry.get_widget_by_id(
-                        feconf.INTERACTIVE_PREFIX, state.widget.widget_id
-                    ).get_rule_description(handler['name'], rule_spec['name'])
-                )
+
+            widget = widget_domain.Registry.get_widget_by_id(
+                feconf.INTERACTIVE_PREFIX,
+                state_dict['widget']['widget_id']
+            )
+
+            input_type = widget.get_handler_by_name(handler['name']).input_type
+
+            rule_spec['description'] = rule_domain.get_rule_description(
+                rule_spec['definition'], exploration.param_specs, input_type
+            )
 
     return state_dict
 
@@ -227,7 +234,7 @@ def export_content_to_html(content_array, block_number, params=None,
     html, widget_array = '', []
     for content in content_array:
         if content.type in ['text', 'image', 'video']:
-            value = (utils.parse_with_jinja(content.value, params)
+            value = (jinja_utils.parse_string(content.value, params)
                      if content.type == 'text' else content.value)
 
             if escape_text_strings:
@@ -267,18 +274,14 @@ def export_to_yaml(exploration_id):
     """Returns a YAML version of the exploration."""
     exploration = get_exploration_by_id(exploration_id)
 
-    param_specs = [{
-        'name': param_spec.name, 'obj_type': param_spec.obj_type
-    } for param_spec in exploration.param_specs]
-
-    states_list = [export_state_internals_to_dict(
-        exploration_id, state_id, human_readable_dests=True)
-        for state_id in exploration.state_ids]
-
     return utils.yaml_from_dict({
         'default_skin': exploration.default_skin,
-        'param_specs': param_specs,
-        'states': states_list
+        'param_changes': exploration.param_change_dicts,
+        'param_specs': exploration.param_specs_dict,
+        'states': [export_state_internals_to_dict(
+            exploration_id, state_id, human_readable_dests=True)
+            for state_id in exploration.state_ids],
+        'schema_version': CURRENT_EXPLORATION_SCHEMA_VERSION
     })
 
 
@@ -304,16 +307,12 @@ def save_exploration(committer_id, exploration):
         For states, all properties except 'id' are versioned. State dests are
         specified using names and not ids.
         """
-        param_specs = [{
-            'name': param_spec.name, 'obj_type': param_spec.obj_type
-        } for param_spec in exploration.param_specs]
-
-        states_list = [export_state_internals_to_dict(
-            exploration.id, state_id, human_readable_dests=True)
-            for state_id in exploration.state_ids]
-
         return {
-            'param_specs': param_specs, 'states': states_list
+            'param_changes': exploration.param_change_dicts,
+            'param_specs': exploration.param_specs_dict,
+            'states': [export_state_internals_to_dict(
+                exploration.id, state_id, human_readable_dests=True)
+                for state_id in exploration.state_ids]
         }
 
     def _save_exploration_transaction(committer_id, exploration):
@@ -332,7 +331,8 @@ def save_exploration(committer_id, exploration):
             'category': exploration.category,
             'title': exploration.title,
             'state_ids': exploration.state_ids,
-            'param_specs': exploration.param_spec_dicts,
+            'param_specs': exploration.param_specs_dict,
+            'param_changes': exploration.param_change_dicts,
             'is_public': exploration.is_public,
             'image_id': exploration.image_id,
             'editor_ids': exploration.editor_ids,
@@ -437,57 +437,27 @@ def delete_exploration(committer_id, exploration_id, force_deletion=False):
 
 
 # Operations involving exploration parameters.
-def get_param_instance(exploration_id, name, obj_type, values):
-    """Returns a Parameter instance corresponding to the given inputs.
-
-    The caller is responsible for adding the new parameter to the exploration
-    parameter list, if it does not already exist.
-
-    If the obj_type is None, it is taken to be 'TemplatedString' if any element
-    of values contains '{{' and '}}' characters, and 'UnicodeString' otherwise.
-
-    If a parameter with this name already exists for the exploration, and the
-    new obj_type does not match the existing parameter's obj_type, a
-    ValueError is raised.
-    """
+def get_init_params(exploration_id):
+    """Returns an initial set of exploration parameters for a reader."""
     exploration = get_exploration_by_id(exploration_id)
 
-    for param_spec in exploration.param_specs:
-        if param_spec.name == name:
-            if obj_type and param_spec.obj_type != obj_type:
-                raise ValueError(
-                    'Parameter %s has wrong obj_type: was %s, expected %s'
-                    % (name, obj_type, param_spec.obj_type))
-            else:
-                return param_domain.Parameter(
-                    param_spec.name, param_spec.obj_type, values)
-
-    # The parameter was not found, so create a new one.
-    if obj_type is None:
-        is_templated_string = False
-        for value in values:
-            if (isinstance(value, basestring) and
-                    '{{' in value and '}}' in value):
-                is_templated_string = True
-        obj_type = ('TemplatedString' if is_templated_string
-                    else 'UnicodeString')
-
-    added_param = param_domain.Parameter(name, obj_type, values)
-
-    return added_param
+    reader_params = {}
+    for pc in exploration.param_changes:
+        obj_type = exploration.get_obj_type_for_param(pc.name)
+        reader_params[pc.name] = pc.get_normalized_value(obj_type, {})
+    return reader_params
 
 
-def update_with_state_params(exploration_id, state_id, reader_params=None):
+def update_with_state_params(exploration_id, state_id, reader_params):
     """Updates a reader's params using the params for the given state."""
-    if reader_params is None:
-        reader_params = {}
-
+    exploration = get_exploration_by_id(exploration_id)
     state = get_state_by_id(exploration_id, state_id)
 
-    for item in state.param_changes:
-        reader_params[item.name] = (
-            None if item.value is None else utils.parse_with_jinja(
-                item.value, reader_params))
+    old_params = copy.deepcopy(reader_params)
+
+    for pc in state.param_changes:
+        obj_type = exploration.get_obj_type_for_param(pc.name)
+        reader_params[pc.name] = pc.get_normalized_value(obj_type, old_params)
     return reader_params
 
 
@@ -580,17 +550,19 @@ def update_state(committer_id, exploration_id, state_id, new_state_name,
     if param_changes:
         state.param_changes = []
         for param_change in param_changes:
-            param_instance = get_param_instance(
-                exploration_id, param_change['name'], None,
-                param_change['values'])
 
-            if not any([param_spec.name == param_change['name']
-                        for param_spec in exploration.param_specs]):
-                exploration.param_specs.append(
-                    param_domain.ParamSpec(param_change['name'],
-                    'UnicodeString'))
+            exp_param_spec = exploration.param_specs.get(param_change['name'])
+            if exp_param_spec is None:
+                raise Exception('No parameter named %s exists in this '
+                                'exploration' % param_change['name'])
 
-            state.param_changes.append(param_instance)
+            # TODO(sll): Here (or when validating the state before committing),
+            # check whether some sample generated values match the expected
+            # obj_type.
+
+            state.param_changes.append(param_domain.ParamChange(
+                param_change['name'], param_change['generator_id'],
+                param_change['customization_args']))
 
     if interactive_widget:
         state.widget.widget_id = interactive_widget
@@ -620,22 +592,25 @@ def update_state(committer_id, exploration_id, state_id, new_state_name,
         for rule_ind in range(len(ruleset)):
             rule = ruleset[rule_ind]
             state_rule = exp_domain.RuleSpec(
-                rule.get('name'), rule.get('inputs'), rule.get('dest'),
-                rule.get('feedback'), []
+                rule.get('definition'), rule.get('dest'), rule.get('feedback'),
+                rule.get('param_changes')                
             )
 
             if rule['description'] == feconf.DEFAULT_RULE_NAME:
                 if (rule_ind != len(ruleset) - 1 or
-                        rule['name'] != feconf.DEFAULT_RULE_NAME):
+                        rule['definition']['rule_type'] !=
+                        rule_domain.DEFAULT_RULE_TYPE):
                     raise ValueError('Invalid ruleset: the last rule '
                                      'should be a default rule.')
             else:
+                # TODO(sll): Generalize this to Boolean combinations of rules.
                 matched_rule = generic_widget.get_rule_by_name(
-                    'submit', state_rule.name)
+                    'submit', state_rule.definition['name'])
 
                 # Normalize and store the rule params.
-                for param_name in state_rule.inputs:
-                    value = state_rule.inputs[param_name]
+                # TODO(sll): Generalize this to Boolean combinations of rules.
+                rule_inputs = state_rule.definition['inputs']
+                for param_name, value in rule_inputs.iteritems():
                     param_type = rule_domain.get_obj_type_for_param_name(
                         matched_rule, param_name)
 
@@ -650,7 +625,7 @@ def update_state(committer_id, exploration_id, state_id, new_state_name,
                             '%s has the wrong type. Please replace it '
                             'with a %s.' % (value, param_type.__name__))
 
-                    state_rule.inputs[param_name] = normalized_param
+                    rule_inputs[param_name] = normalized_param
 
             state.widget.handlers[0].rule_specs.append(state_rule)
 
@@ -708,33 +683,10 @@ def delete_state(committer_id, exploration_id, state_id):
         _delete_state_transaction, committer_id, exploration_id, state_id)
 
 
-def _find_first_match(handler, all_rule_classes, answer, state_params):
-    for rule_spec in handler.rule_specs:
-        if rule_spec.is_default:
-            return rule_spec
-
-        r = next(r for r in all_rule_classes if r.__name__ == rule_spec.name)
-
-        param_list = []
-        param_defns = rule_domain.get_param_list(r.description)
-        for (param_name, obj_cls) in param_defns:
-            parsed_param = rule_spec.inputs[param_name]
-            if (isinstance(parsed_param, basestring) and '{{' in parsed_param):
-                parsed_param = utils.parse_with_jinja(
-                    parsed_param, state_params)
-            normalized_param = obj_cls.normalize(parsed_param)
-            param_list.append(normalized_param)
-
-        match = r(*param_list).eval(answer)
-        if match:
-            return rule_spec
-
-    raise Exception(
-        'No matching rule found for handler %s.' % handler.name)
-
-
 def classify(exploration_id, state_id, handler_name, answer, params):
     """Return the first rule that is satisfied by a reader's answer."""
+
+    exploration = get_exploration_by_id(exploration_id)
     state = get_state_by_id(exploration_id, state_id)
 
     # Get the widget to determine the input type.
@@ -745,12 +697,16 @@ def classify(exploration_id, state_id, handler_name, answer, params):
     handler = next(h for h in state.widget.handlers if h.name == handler_name)
 
     if generic_handler.input_type is None:
-        selected_rule = handler.rule_specs[0]
+        return handler.rule_specs[0]
     else:
-        selected_rule = _find_first_match(
-            handler, generic_handler.rules, answer, params)
+        for rule_spec in handler.rule_specs:
+            if rule_domain.evaluate_rule(
+                    rule_spec.definition, exploration.param_specs,
+                    generic_handler.input_type, params, answer):
+                return rule_spec
 
-    return selected_rule
+        raise Exception(
+            'No matching rule found for handler %s.' % handler.name)
 
 
 # Creation and deletion methods.
@@ -759,19 +715,23 @@ def create_from_yaml(
         image_id=None):
     """Creates an exploration from a YAML text string."""
     exploration_dict = utils.dict_from_yaml(yaml_content)
+
+    exploration_schema_version = exploration_dict.get('schema_version')
+
+    if exploration_schema_version != CURRENT_EXPLORATION_SCHEMA_VERSION:
+        raise Exception('Sorry, we can only process v1 YAML files at present.')
+
     init_state_name = exploration_dict['states'][0]['name']
 
-    # TODO(sll): Import the default skin too.
     exploration_id = create_new(
         user_id, title, category, exploration_id=exploration_id,
         init_state_name=init_state_name, image_id=image_id)
 
     try:
-        # Make this into an exploration store.
-        exploration_param_specs = [
-            param_domain.ParamSpec.from_dict(param_spec_dict)
-            for param_spec_dict in exploration_dict['param_specs']
-        ]
+        exploration_param_specs = {
+            ps_name: param_domain.ParamSpec.from_dict(ps_val)
+            for (ps_name, ps_val) in exploration_dict['param_specs'].iteritems()
+        }
 
         for sdict in exploration_dict['states']:
             if sdict['name'] != init_state_name:
@@ -785,21 +745,21 @@ def create_from_yaml(
                 for item in sdict['content']
             ]
 
-            state.param_changes = [get_param_instance(
-                exploration_id, pc['name'], pc['obj_type'], pc['values']
+            state.param_changes = [param_domain.ParamChange(
+                pc['name'], pc['generator_id'], pc['customization_args']
             ) for pc in sdict['param_changes']]
 
             for pc in state.param_changes:
-                if not any([param_spec.name == pc.name
-                            for param_spec in exploration_param_specs]):
-                    exploration_param_specs.append(pc)
+                if pc.name not in exploration_param_specs:
+                    raise Exception('Parameter %s was used in a state but not '
+                                    'declared in the exploration param_specs.'
+                                    % pc.name)
 
             wdict = sdict['widget']
             widget_handlers = [exp_domain.AnswerHandlerInstance.from_dict({
                 'name': handler['name'],
                 'rule_specs': [{
-                    'name': rule_spec['name'],
-                    'inputs': rule_spec['inputs'],
+                    'definition': rule_spec['definition'],
                     'dest': convert_state_name_to_id(
                         exploration_id, rule_spec['dest']),
                     'feedback': rule_spec['feedback'],
@@ -814,6 +774,10 @@ def create_from_yaml(
             save_state(user_id, exploration_id, state)
 
         exploration = get_exploration_by_id(exploration_id)
+        exploration.default_skin = exploration_dict['default_skin']
+        exploration.param_changes = [param_domain.ParamChange(
+            pc['name'], pc['generator_id'], pc['customization_args']
+        ) for pc in exploration_dict['param_changes']]
         exploration.param_specs = exploration_param_specs
         save_exploration(user_id, exploration)
     except Exception:
@@ -835,47 +799,61 @@ def fork_exploration(exploration_id, user_id):
     )
 
 
+def load_demo(exploration_id):
+    """Loads a demo exploration."""
+    if not (0 <= int(exploration_id) < len(feconf.DEMO_EXPLORATIONS)):
+        raise Exception('Invalid demo exploration id %s' % exploration_id)
+
+    exploration = feconf.DEMO_EXPLORATIONS[int(exploration_id)]
+
+    if len(exploration) == 3:
+        (exp_filename, title, category) = exploration
+        image_filename = None
+    elif len(exploration) == 4:
+        (exp_filename, title, category, image_filename) = exploration
+    else:
+        raise Exception('Invalid demo exploration: %s' % exploration)
+
+    image_id = None
+    if image_filename:
+        image_filepath = os.path.join(
+            feconf.SAMPLE_IMAGES_DIR, image_filename)
+        image_id = image_models.Image.create(utils.get_file_contents(
+            image_filepath, raw_bytes=True))
+
+    yaml_content = utils.get_sample_exploration_yaml(exp_filename)
+    exploration_id = create_from_yaml(
+        yaml_content, ADMIN_COMMITTER_ID, title, category,
+        exploration_id=exploration_id, image_id=image_id)
+
+    exploration = get_exploration_by_id(exploration_id)
+    exploration.is_public = True
+    save_exploration(ADMIN_COMMITTER_ID, exploration)
+
+    logging.info('Exploration with id %s was loaded.' % exploration_id)
+
+
+def delete_demo(exploration_id):
+    """Deletes a single demo exploration."""
+    exploration = get_exploration_by_id(exploration_id, strict=False)
+    if not exploration:
+        # This exploration does not exist, so it cannot be deleted.
+        logging.info('Exploration with id %s was not deleted, because it '
+                     'does not exist.' % exploration_id)
+    else:
+        delete_exploration(ADMIN_COMMITTER_ID, exploration_id)
+
+
 def load_demos():
     """Initializes the demo explorations."""
-    for index, exploration in enumerate(feconf.DEMO_EXPLORATIONS):
-        if len(exploration) == 3:
-            (exp_filename, title, category) = exploration
-            image_filename = None
-        elif len(exploration) == 4:
-            (exp_filename, title, category, image_filename) = exploration
-        else:
-            raise Exception('Invalid demo exploration: %s' % exploration)
-
-        image_id = None
-        if image_filename:
-            image_filepath = os.path.join(
-                feconf.SAMPLE_IMAGES_DIR, image_filename)
-            image_id = image_models.Image.create(utils.get_file_contents(
-                image_filepath, raw_bytes=True))
-
-        yaml_content = utils.get_sample_exploration_yaml(exp_filename)
-        exploration_id = create_from_yaml(
-            yaml_content, ADMIN_COMMITTER_ID, title, category,
-            exploration_id=str(index), image_id=image_id)
-
-        exploration = get_exploration_by_id(exploration_id)
-        exploration.is_public = True
-        save_exploration(ADMIN_COMMITTER_ID, exploration)
+    for index in range(len(feconf.DEMO_EXPLORATIONS)):
+        load_demo(str(index))
 
 
 def delete_demos():
     """Deletes the demo explorations."""
-    exploration_ids_to_delete = []
-    for int_id in range(len(feconf.DEMO_EXPLORATIONS)):
-        exploration = get_exploration_by_id(str(int_id), strict=False)
-        if not exploration:
-            # This exploration does not exist, so it cannot be deleted.
-            logging.info('No exploration with id %s found.' % int_id)
-        else:
-            exploration_ids_to_delete.append(exploration.id)
-
-    for exploration_id in exploration_ids_to_delete:
-        delete_exploration(ADMIN_COMMITTER_ID, exploration_id)
+    for index in range(len(feconf.DEMO_EXPLORATIONS)):
+        delete_demo(str(index))
 
 
 def reload_demos():

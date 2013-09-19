@@ -41,7 +41,7 @@
 
   <br><br>
 
-  <h4>
+  <h4 id="rules">
     Answer classification rules
     <img class="oppia-help" src="/images/help.png"
          ui-jq="tooltip"
@@ -174,17 +174,21 @@
       </button>
       <h3 id="customizeWidgetModalLabel">Customize This Widget</h3>
     </div>
+
     <div class="modal-body">
+      The following widget parameters can be customized:
+      <br><br>
       <div ng-repeat="(key, paramDict) in interactiveWidget.params">
-        Set the value of <[key]>
-        <param-generator-editor generator-id="paramDict.generator_id"
+        <strong><[key]></strong>
+        <value-generator-editor generator-id="paramDict.generator_id"
                                 init-args="paramDict.init_args"
                                 customization-args="paramDict.customization_args"
                                 obj-type="paramDict.obj_type">
-        </param-generator-editor>
+        </value-generator-editor>
         <br>
       </div>
     </div>
+
     <div class="modal-footer">
       <button type="button" class="btn" data-dismiss="modal" ng-click="saveWidgetParams()">Save</button>
     </div>

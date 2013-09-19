@@ -14,10 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Dummy model file to keep django happy."""
+__author__ = 'Sean Lip'
 
-__author__ = 'Tarashish Mishra'
+from core.domain import value_generators_domain
+import test_utils
 
-from core.storage.config import django_models
 
-ConfigPropertyModel = django_models.ConfigPropertyModel
+class ValueGeneratorsUnitTests(test_utils.GenericTestBase):
+    """Test the value generator registry."""
+
+    def test_value_generator_registry(self):
+        COPIER_ID = 'Copier'
+
+        copier = value_generators_domain.Registry.get_generator_class_by_id(
+            COPIER_ID)
+        self.assertEqual(copier().id, COPIER_ID)
+
+        all_generator_classes = (
+            value_generators_domain.Registry.get_all_generator_classes())
+        self.assertEqual(len(all_generator_classes), 4)

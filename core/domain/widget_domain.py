@@ -22,9 +22,10 @@ import inspect
 import os
 import pkgutil
 
-import feconf
 from core.domain import obj_services
 from core.domain import rule_domain
+import feconf
+import jinja_utils
 import utils
 
 
@@ -50,8 +51,8 @@ class AnswerHandler(object):
         }
 
 
-class WidgetParam(object):
-    """Value object for a widget parameter."""
+class WidgetParamSpec(object):
+    """Value object for a widget parameter specification."""
 
     def __init__(self, name, description, generator, init_args,
                  customization_args, obj_type):
@@ -63,17 +64,6 @@ class WidgetParam(object):
         self.init_args = init_args
         self.customization_args = customization_args
         self.obj_type = obj_type
-
-    @property
-    def value(self):
-        """Generates a new value using the parameter's customization args."""
-        value_generator = self.generator(**self.init_args)
-        generated_value = value_generator.generate_value(
-            **self.customization_args)
-
-        # Check that the generated value has the correct type.
-        obj_class = obj_services.get_object_class(self.obj_type)
-        return obj_class.normalize(generated_value)
 
 
 class BaseWidget(object):
@@ -110,7 +100,7 @@ class BaseWidget(object):
 
     @property
     def params(self):
-        return [WidgetParam(**param) for param in self._params]
+        return [WidgetParamSpec(**param) for param in self._params]
 
     @property
     def handlers(self):
@@ -166,7 +156,7 @@ class BaseWidget(object):
             feconf.WIDGETS_DIR, self.type, self.id, '%s.html' % self.id))
 
     def _get_widget_param_instances(self, state_customization_args, 
-                                    context_params):
+                                    context_params, preview_mode=False):
         """Returns a dict of parameter names and values for the widget.
 
         This dict is used to evaluate widget templates. The parameter values
@@ -180,6 +170,10 @@ class BaseWidget(object):
           - context_params: dict with state parameters that is used to
               evaluate any values in state_customization_args that are of the
               form {{STATE_PARAM_NAME}}.
+          - preview_mode: if True, default values are generated if the
+              customization_args do not permit the generation of an acceptable
+              parameter value. Otherwise, this method fails noisily if the
+              customization_args are not valid.
 
         Returns:
           A dict of key-value pairs; the keys are parameter names and the
@@ -187,10 +181,6 @@ class BaseWidget(object):
         """
         if state_customization_args is None:
             state_customization_args = {}
-        # TODO(sll): Move this out of here and put it in the reader
-        # controller? Widgets should not know about the states they are in.
-        state_customization_args = utils.evaluate_object_with_params(
-            state_customization_args, context_params)
 
         parameters = {}
         for param in self.params:
@@ -203,17 +193,29 @@ class BaseWidget(object):
                 else param.customization_args
             )
 
-            parameters[param.name] = value_generator.generate_value(
-                **args_to_use)
+            try:
+                generated_value = value_generator.generate_value(
+                    context_params, **args_to_use)
+            except Exception:
+                if preview_mode:
+                    generated_value = value_generator.default_value
+                else:
+                    raise
+
+            # Normalize the generated values to the correct obj_type.
+            obj_class = obj_services.get_object_class(param.obj_type)
+            parameters[param.name] = obj_class.normalize(generated_value)
 
         return parameters
 
-    def get_raw_code(self, state_customization_args, context_params):
+    def get_raw_code(self, state_customization_args, context_params,
+                     preview_mode=False):
         """Gets the raw code for a parameterized widget."""
-        return utils.parse_with_jinja(
+        return jinja_utils.parse_string(
             self.template,
             self._get_widget_param_instances(
-                state_customization_args, context_params))
+                state_customization_args, context_params,
+                preview_mode=preview_mode))
 
     def get_reader_response_html(self, state_customization_args,
                                  context_params, answer):
@@ -227,8 +229,8 @@ class BaseWidget(object):
         parameters['answer'] = answer
 
         html, iframe = self._response_template_and_iframe
-        html = utils.parse_with_jinja(html, parameters)
-        iframe = utils.parse_with_jinja(iframe, parameters)
+        html = jinja_utils.parse_string(html, parameters)
+        iframe = jinja_utils.parse_string(iframe, parameters)
         return html, iframe
 
     def get_stats_log_html(self, state_customization_args,
@@ -245,9 +247,10 @@ class BaseWidget(object):
             state_customization_args, context_params)
         parameters['answer'] = answer
 
-        return utils.parse_with_jinja(self._stats_log_template, parameters)
+        return jinja_utils.parse_string(self._stats_log_template, parameters)
 
-    def get_widget_instance_dict(self, customization_args, context_params):
+    def get_widget_instance_dict(self, customization_args, context_params,
+                                 preview_mode=True):
         """Gets a dict representing a parameterized widget.
 
         The value for params in the result is a dict, formatted as:
@@ -256,6 +259,11 @@ class BaseWidget(object):
 
         where PARAM_DESCRIPTION_DICT has the keys ['value', 'generator_id',
         'init_args', 'customization_args', 'obj_type'].
+
+        If preview_mode is True then a default parameter value is used when the
+        customization_args are invalid. This is necessary if, for example, a
+        widget parameter depends on a state parameter which has not been set,
+        as would be the case in the editor preview mode.
         """
 
         result = {
@@ -263,11 +271,12 @@ class BaseWidget(object):
             'category': self.category,
             'description': self.description,
             'id': self.id,
-            'raw': self.get_raw_code(customization_args, context_params),
+            'raw': self.get_raw_code(
+                customization_args, context_params, preview_mode=preview_mode),
         }
 
         param_instances = self._get_widget_param_instances(
-            customization_args, context_params)
+            customization_args, context_params, preview_mode=preview_mode)
 
         param_dict = {}
         for param in self.params:
@@ -303,10 +312,6 @@ class BaseWidget(object):
         handler = self.get_handler_by_name(handler_name)
         return next(
             r for r in handler.rules if r.__name__ == rule_name)
-
-    def get_rule_description(self, handler_name, rule_name):
-        """Gets a rule description, given its name and ancestors."""
-        return self.get_rule_by_name(handler_name, rule_name).description
 
 
 class Registry(object):
