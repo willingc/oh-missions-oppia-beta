@@ -242,6 +242,21 @@ class FeedbackHandler(base.BaseHandler):
         self.render_json(values)
 
 
+class ReaderFeedbackHandler(base.BaseHandler):
+   """Submits feedback from the reader."""
+
+   REQUIRE_PAYLOAD_CSRF_CHECK = False
+
+   def post(self, exploration_id, state_id):
+     """Handles POST requests."""
+
+     feedback = self.payload.get('feedback')
+     # TODO(sll): Add the reader's history log here.
+
+     stats_services.EventHandler.record_state_feedback_from_reader(
+         exploration_id, state_id, feedback, [])
+
+
 class RandomExplorationPage(base.BaseHandler):
     """Returns the page for a random exploration."""
 

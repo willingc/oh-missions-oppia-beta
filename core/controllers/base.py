@@ -171,7 +171,7 @@ class BaseHandler(webapp2.RequestHandler):
         if self.payload and self.REQUIRE_PAYLOAD_CSRF_CHECK:
             try:
                 if not self.PAGE_NAME_FOR_CSRF:
-                    raise Exception('No page name specified for this '
+                    raise Exception('No CSRF page name specified for this '
                                     'handler.')
 
                 csrf_token = self.request.get('csrf_token')
@@ -258,7 +258,10 @@ class BaseHandler(webapp2.RequestHandler):
             self.response.write(json.dumps(values))
         else:
             self.values.update(values)
-            self.render_template('error/error.html')
+            if error_code == 404:
+                self.render_template('error/error_404.html')
+            else:
+                self.render_template('error/error.html')
 
     def handle_exception(self, exception, debug_mode):
         """Overwrites the default exception handler."""
