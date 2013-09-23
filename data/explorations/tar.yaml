@@ -77,33 +77,45 @@ states:
         feedback:
         - Wrapper directory name is incorrect.
         param_changes: []
-      # - dest: Pack!
-      #   feedback:
-      #   - An unexpected file present. You can read about how to remove it <a href="/wiki/Tar_hints_for_Mac_OS_X_users">on our wiki</a>.
-      #   inputs: {}
-      #   name: HasAppleDoubleFile
-      #   param_changes: []
-      # - dest: Pack!
-      #   feedback:
-      #   - An unexpected file present.
-      #   inputs:
-      #     expected_files: ["myproject-0.1", "myproject-0.1/hello.c", "myproject-0.1/Makefile"]
-      #   name: HasUnexpectedFile
-      #   param_changes: []
-      # - dest: Pack!
-      #   feedback:
-      #   - Archive does not contain all expected files
-      #   inputs:
-      #     expected_files: ["myproject-0.1", "myproject-0.1/hello.c", "myproject-0.1/Makefile"]
-      #   name: MissingExpectedFile
-      #   param_changes: []
-      # - dest: Pack!
-      #   feedback:
-      #   - A file has incorrect contents. 
-      #   inputs:
-      #     file_list: ['hello.c', 'Makefile'] 
-      #   name: HasUnexpectedContent
-      #   param_changes: []
+      - definition:
+          inputs: {}
+          name: HasAppleDoubleFile
+          rule_type: atomic
+          subject: answer
+        dest: Pack!
+        feedback:
+        - An unexpected file present. You can read about how to remove it <a href="/wiki/Tar_hints_for_Mac_OS_X_users">on our wiki</a>.
+        param_changes: []
+      - definition:
+          inputs:
+            expected_files: ["myproject-0.1", "myproject-0.1/hello.c", "myproject-0.1/Makefile"]
+          name: HasUnexpectedFile
+          rule_type: atomic
+          subject: answer
+        dest: Pack!
+        feedback:
+        - An unexpected file present.
+        param_changes: []
+      - definition:
+          inputs:
+            expected_files: ["myproject-0.1", "myproject-0.1/hello.c", "myproject-0.1/Makefile"]
+          name: MissingExpectedFile
+          rule_type: atomic
+          subject: answer
+        dest: Pack!
+        feedback:
+        - Archive does not contain all expected files
+        param_changes: []
+      - definition:
+          inputs:
+            file_list: ['hello.c', 'Makefile'] 
+          name: HasUnexpectedContent
+          rule_type: atomic
+          subject: answer
+        dest: Pack!
+        feedback:
+        - A file has incorrect contents. 
+        param_changes: []
       - definition:
           rule_type: default
         dest: END
