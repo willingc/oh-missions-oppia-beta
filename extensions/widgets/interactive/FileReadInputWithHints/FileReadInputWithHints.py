@@ -3,7 +3,7 @@ from extensions.objects.models import objects
 from extensions.value_generators.models import generators
 
 
-class TarFileReadInput(widget_domain.BaseWidget):
+class FileReadInputWithHints(widget_domain.BaseWidget):
     """Definition of a widget.
 
     Do NOT make any changes to this widget definition while the Oppia app is
@@ -14,14 +14,14 @@ class TarFileReadInput(widget_domain.BaseWidget):
     """
 
     # The human-readable name of the widget.
-    name = 'Tar File input'
+    name = 'File input with hints'
 
     # The category the widget falls under in the widget repository.
     category = 'Basic Input'
 
     # A description of the widget.
     description = (
-        'A tar file input widget.'
+        'A file input widget.'
     )
 
     # Customization parameters and their descriptions, types and default
@@ -70,5 +70,5 @@ class TarFileReadInput(widget_domain.BaseWidget):
     # must have at least one of these. This attribute name MUST be prefixed by
     # '_'.
     _handlers = [{
-        'name': 'submit', 'input_type': objects.TarFileString
+        'name': 'submit', 'input_type': objects.UnicodeString
     }]
