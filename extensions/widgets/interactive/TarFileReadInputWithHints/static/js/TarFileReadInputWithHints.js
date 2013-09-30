@@ -1,12 +1,12 @@
-var fileInputWidget = angular.module('fileInputWidgetWithHints', ['ngSanitize']);
+var tarFileInputWidgetWithHints = angular.module('tarFileInputWidgetWithHints', ['ngSanitize']);
 
 // Sets the AngularJS interpolators as <[ and ]>, to not conflict with Django.
-fileInputWidget.config(function($interpolateProvider) {
+tarFileInputWidgetWithHints.config(function($interpolateProvider) {
   $interpolateProvider.startSymbol('<[');
   $interpolateProvider.endSymbol(']>');
 });
 
-function FileReadInputWithHints($scope) {
+function TarFileReadInputWithHints($scope) {
   $scope.hintPlaceholder = GLOBALS.hintPlaceholder;
   $scope.lowHint = GLOBALS.lowHint;
   $scope.mediumHint = GLOBALS.mediumHint;

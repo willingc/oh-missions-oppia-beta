@@ -1,4 +1,4 @@
-<html ng-app="fileInputWidgetWithHints">
+<html ng-app="tarFileInputWidgetWithHints">
   <head>
     <link rel="stylesheet" type="text/css"
       href="/lib/static/bootstrap-2.3.1-r1/css/bootstrap.css" media="screen">
@@ -18,7 +18,7 @@
   </head>
 
   <body>
-    <div ng-controller="FileReadInputWithHints">
+    <div ng-controller="TarFileReadInputWithHints">
 
       <ul class="nav nav-tabs" id="hints-tab">
         <li class="active"><a data-toggle="tab" href="#hint">Hints</a></li>
@@ -36,8 +36,8 @@
 
       <hr/>
 
-      <input onchange="angular.element(this).scope().submitAnswer(this)"
-              type="file" required>
+      <input onchange= "angular.element(this).scope().submitAnswer(this)"
+             type="file" required>
 
       <div id="processing-modal" class="modal hide" data-backdrop="false">
         <div class="modal-body">
@@ -45,10 +45,9 @@
           <p>Processing uploaded file: <[filename]></p>
         </div>
       </div>
-
     </div>
-    
-    <script src="/extensions/widgets/interactive/FileReadInputWithHints/static/js/FileReadInputWithHints.js">
+
+    <script src="/extensions/widgets/interactive/TarFileReadInputWithHints/static/js/TarFileReadInputWithHints.js">
     </script>
   </body>
 </html>

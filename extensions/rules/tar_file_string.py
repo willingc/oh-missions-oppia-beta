@@ -48,7 +48,7 @@ class ChecksWrapperDirPresence(base.TarFileStringRule):
 
 
 class HasAppleDoubleFile(base.TarFileStringRule):
-    description = 'Contains a Apple Double file.'
+    description = 'Contains an Apple Double file.'
 
     def _evaluate(self, subject):
         members = subject.getmembers()
@@ -59,7 +59,7 @@ class HasAppleDoubleFile(base.TarFileStringRule):
 
 
 class HasUnexpectedFile(base.TarFileStringRule):
-    description = 'Contains file not present in {{expected_files|List}}.'
+    description = 'Contains a file not present in {{expected_files|List}}.'
 
     def _evaluate(self, subject):
         members = subject.getmembers()
@@ -70,14 +70,17 @@ class HasUnexpectedFile(base.TarFileStringRule):
 
 
 class MissingExpectedFile(base.TarFileStringRule):
-    description = 'Missing expected file from {{expected_files|List}}.'
+    description = 'Omits one or more files in {{expected_files|List}}.'
 
     def _evaluate(self, subject):
         members = subject.getmembers()
+        member_list = []
         for member in members:
             if member.name in self.expected_files:
-                self.expected_files.remove(member.name)
-        return bool(self.expected_files)
+                member_list.append(member.name)
+        return bool(
+            set(self.expected_files) - set(member_list)
+        )
 
 
 class HasUnexpectedContent(base.TarFileStringRule):
@@ -89,10 +92,10 @@ class HasUnexpectedContent(base.TarFileStringRule):
             if member.isfile():
                 filename = member.name.split('/')[-1]
                 if filename in self.file_list:
-                    if (subject.extractfile(member).read()
-                            != utils.get_file_contents(
-                                os.path.join(
-                                    feconf.DATA_DIR, filename
-                                ))):
+                    subj_contents = subject.extractfile(member).read()
+                    expected_contents = utils.get_file_contents(
+                        os.path.join(feconf.DATA_DIR, filename)
+                    )
+                    if subj_contents != expected_contents:
                         return True
         return False

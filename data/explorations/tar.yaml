@@ -139,4 +139,4 @@ states:
         - Yay! you did it.
         param_changes: []
     sticky: false
-    widget_id: TarFileReadInput
+    widget_id: TarFileReadInputWithHints

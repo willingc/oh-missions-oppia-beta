@@ -51,12 +51,12 @@ fi
 echo Checking whether Karma is installed in tools
 if [ ! -d "$TOOLS_DIR/node-0.10.1/lib/node_modules/karma" ]; then
   echo Installing Karma
-  sudo $TOOLS_DIR/node-0.10.1/bin/npm install -g karma@0.8.7
+  $TOOLS_DIR/node-0.10.1/bin/npm install -g karma@0.8.7 || sudo $TOOLS_DIR/node-0.10.1/bin/npm install -g karma@0.8.7
 
-  sudo chown -R $ME $TOOLS_DIR/node-0.10.1/bin
-  sudo chmod -R 744 $TOOLS_DIR/node-0.10.1/bin
-  sudo chown -R $ME $TOOLS_DIR/node-0.10.1/lib/node_modules
-  sudo chmod -R 744 $TOOLS_DIR/node-0.10.1/lib/node_modules
+  chown -R $ME $TOOLS_DIR/node-0.10.1/bin || sudo chown -R $ME $TOOLS_DIR/node-0.10.1/bin
+  chmod -R 744 $TOOLS_DIR/node-0.10.1/bin || sudo chmod -R 744 $TOOLS_DIR/node-0.10.1/bin
+  chown -R $ME $TOOLS_DIR/node-0.10.1/lib/node_modules || sudo chown -R $ME $TOOLS_DIR/node-0.10.1/lib/node_modules
+  chmod -R 744 $TOOLS_DIR/node-0.10.1/lib/node_modules || sudo chmod -R 744 $TOOLS_DIR/node-0.10.1/lib/node_modules
 fi
 
 # For this to work, you must first run
@@ -68,12 +68,12 @@ if [ ! "$NO_JSREPL" -a ! -d "$THIRD_PARTY_DIR/static/jsrepl" ]; then
   echo Checking whether coffeescript has been installed via node.js
   if [ ! -d "$TOOLS_DIR/node-0.10.1/lib/node_modules/coffee-script" ]; then
     echo Installing CoffeeScript
-    sudo $TOOLS_DIR/node-0.10.1/bin/npm install -g coffee-script@1.2.0
+    $TOOLS_DIR/node-0.10.1/bin/npm install -g coffee-script@1.2.0 || sudo $TOOLS_DIR/node-0.10.1/bin/npm install -g coffee-script@1.2.0
   fi
   echo Checking whether uglify has been installed via node.js
   if [ ! -d "$TOOLS_DIR/node-0.10.1/lib/node_modules/uglify-js" ]; then
     echo Installing uglify
-    sudo $TOOLS_DIR/node-0.10.1/bin/npm install -g uglify-js
+    $TOOLS_DIR/node-0.10.1/bin/npm install -g uglify-js || sudo $TOOLS_DIR/node-0.10.1/bin/npm install -g uglify-js
   fi
 
   echo Downloading jsrepl
@@ -104,10 +104,10 @@ if [ ! "$NO_JSREPL" -a ! -d "$THIRD_PARTY_DIR/static/jsrepl" ]; then
   mkdir -p $THIRD_PARTY_DIR/static/jsrepl
   mv $TOOLS_DIR/jsrepl/build/* $THIRD_PARTY_DIR/static/jsrepl
 
-  sudo chown -R $ME $TOOLS_DIR/node-0.10.1/bin
-  sudo chmod -R 744 $TOOLS_DIR/node-0.10.1/bin
-  sudo chown -R $ME $TOOLS_DIR/node-0.10.1/lib/node_modules
-  sudo chmod -R 744 $TOOLS_DIR/node-0.10.1/lib/node_modules
+  chown -R $ME $TOOLS_DIR/node-0.10.1/bin || sudo chown -R $ME $TOOLS_DIR/node-0.10.1/bin
+  chmod -R 744 $TOOLS_DIR/node-0.10.1/bin || sudo chmod -R 744 $TOOLS_DIR/node-0.10.1/bin
+  chown -R $ME $TOOLS_DIR/node-0.10.1/lib/node_modules || sudo chown -R $ME $TOOLS_DIR/node-0.10.1/lib/node_modules
+  chmod -R 744 $TOOLS_DIR/node-0.10.1/lib/node_modules || sudo chmod -R 744 $TOOLS_DIR/node-0.10.1/lib/node_modules
 fi
 
 # Static resources.
@@ -127,6 +127,16 @@ if [ ! -d "$THIRD_PARTY_DIR/static/select2-3.4.1" ]; then
   wget https://github.com/ivaynberg/select2/archive/3.4.1.zip -O select2-download.zip
   unzip select2-download.zip -d $THIRD_PARTY_DIR/static/
   rm select2-download.zip
+fi
+
+echo Checking whether jwysiwyg is installed in third_party
+if [ ! -d "$THIRD_PARTY_DIR/static/jwysiwyg-496497" ]; then
+  echo Installing jwysiwyg
+  mkdir -p $THIRD_PARTY_DIR/static/
+  wget https://github.com/jwysiwyg/jwysiwyg/archive/496497b0772067a0064b627c02893d989ccc7cc9.zip -O jwysiwyg-download.zip
+  unzip jwysiwyg-download.zip -d $THIRD_PARTY_DIR/static/
+  rm jwysiwyg-download.zip
+  mv $THIRD_PARTY_DIR/static/jwysiwyg-496497b0772067a0064b627c02893d989ccc7cc9 $THIRD_PARTY_DIR/static/jwysiwyg-496497
 fi
 
 echo Checking whether jquery is installed in third_party
