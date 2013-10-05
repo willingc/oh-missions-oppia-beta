@@ -21,46 +21,46 @@ handlers:
 - url: /favicon.ico
   static_files: static/images/favicon.ico
   upload: static/images/favicon.ico
-  secure: always
+  secure: never
   http_headers:
     Cache-Control: 'public, max-age=2592000'
     Vary: Accept-Encoding
 - url: /images
   static_dir: static/images
-  secure: always
+  secure: never
   http_headers:
     Cache-Control: 'public, max-age=600'
 - url: /css
   # NB: not minified. TODO(sll): fix.
   static_dir: core/templates/dev/head/css
-  secure: always
+  secure: never
 - url: /img
   static_dir: third_party/bootstrap/img
-  secure: always
+  secure: never
   http_headers:
     Cache-Control: 'public, max-age=2592000'
     Vary: Accept-Encoding
 - url: /third_party/static
   static_dir: third_party/static
-  secure: always
+  secure: never
   http_headers:
     Cache-Control: 'public, max-age=2592000'
     Vary: Accept-Encoding
 - url: /lib/static
   static_dir: lib/static
-  secure: always
+  secure: never
   http_headers:
     Cache-Control: 'public, max-age=2592000'
     Vary: Accept-Encoding
 - url: /extensions/widgets/(.*)/(.*)/static/(.*)
   static_files: extensions/widgets/\1/\2/static/\3
   upload: extensions/widgets/(.*)/(.*)/static/(.*)
-  secure: always
+  secure: never
   http_headers:
     Cache-Control: 'no-cache'
 - url: /.*
   script: main.app
-  secure: always
+  secure: never
 
 libraries:
 - name: jinja2
