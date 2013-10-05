@@ -58,7 +58,7 @@ class StatsIntegrationTest(test_utils.GenericTestBase):
         self.assertEqual(response.content_type, 'application/json')
 
         exploration_json = json.loads(response.body)
-        self.assertEqual(exploration_json['title'], 'Welcome to Oppia!')
+        self.assertEqual(exploration_json['title'], 'Missions - Tar')
 
         state_id = exploration_json['state_id']
         response = self.testapp.post(str('/learn/0/%s' % state_id), {
