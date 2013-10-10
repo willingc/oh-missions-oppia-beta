@@ -1,5 +1,11 @@
 language: python
 python:
   - "2.7"
+install:
+  - test sudo apt-get install libxml2-dev libxslt1-dev || true
+  - pip install lxml
+  - source scripts/setup.sh
+  - source scripts/setup_gae.sh
+  - bash scripts/install_third_party.sh
 # command to run tests
-script: bash scripts/test.sh
+script: python core/tests/gae_suite.py

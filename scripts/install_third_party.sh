@@ -17,6 +17,25 @@
 set -e
 source $(dirname $0)/setup.sh || exit 1
 
+echo Checking whether GAE is installed in $GOOGLE_APP_ENGINE_HOME
+if [ ! -d "$GOOGLE_APP_ENGINE_HOME" ]; then
+  echo Installing Google App Engine
+  mkdir -p $GOOGLE_APP_ENGINE_HOME
+  wget http://googleappengine.googlecode.com/files/google_appengine_1.7.7.zip -O gae-download.zip
+  unzip gae-download.zip -d $TOOLS_DIR/google_appengine_1.7.7/
+  rm gae-download.zip
+fi
+
+# webtest is used for tests.
+echo Checking if webtest is installed in third_party
+if [ ! -d "$TOOLS_DIR/webtest-1.4.2" ]; then
+  echo Installing webtest framework
+  wget http://pypi.python.org/packages/source/W/WebTest/WebTest-1.4.2.zip -O webtest-download.zip
+  unzip webtest-download.zip -d $TOOLS_DIR
+  rm webtest-download.zip
+  mv $TOOLS_DIR/WebTest-1.4.2 $TOOLS_DIR/webtest-1.4.2
+fi
+
 
 ME=$(whoami)
 
@@ -99,7 +118,7 @@ if [ ! "$NO_JSREPL" -a ! -d "$THIRD_PARTY_DIR/static/jsrepl" ]; then
   NODE_PATH=../node-0.10.1/lib/node_modules cake bake
 
   # Return to the Oppia root folder.
-  cd ../../oppia
+  cd ../../oh-missions-oppia-beta
   # Move the build directory to the static resources folder.
   mkdir -p $THIRD_PARTY_DIR/static/jsrepl
   mv $TOOLS_DIR/jsrepl/build/* $THIRD_PARTY_DIR/static/jsrepl

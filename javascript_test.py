@@ -18,14 +18,20 @@ __author__ = 'Sean Lip'
 
 import subprocess
 import test_utils
+import unittest
 
 
+@unittest.skipIf(
+    subprocess.call(['which', 'google-chrome', 'firefox']
+                    ) == 1,
+    'Firefox and/or Chrome binaries not found.'
+)
 class JavaScriptTests(test_utils.GenericTestBase):
 
     TAGS = [test_utils.TestTags.SLOW_TEST]
 
     def test_with_karma(self):
         return_code = subprocess.call([
-             '../tools/node-0.10.1/bin/karma', 'start',
-             'core/tests/karma.conf.js'])
+            '../tools/node-0.10.1/bin/karma', 'start',
+            'core/tests/karma.conf.js'])
         self.assertEqual(return_code, 0)
