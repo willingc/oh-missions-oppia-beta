@@ -43,9 +43,9 @@ done
 export NO_JSREPL
 
 echo Checking name of current directory
-EXPECTED_PWD='oppia'
+EXPECTED_PWD='oh-missions-oppia-beta'
 if [ ${PWD##*/} != $EXPECTED_PWD ]; then
-  echo This script should be run from the oppia/ root folder.
+  echo This script should be run from the oh-missions-oppia-beta/ root folder.
   return 1
 fi
 
