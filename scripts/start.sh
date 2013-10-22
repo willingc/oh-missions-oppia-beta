@@ -64,7 +64,7 @@ bash scripts/install_third_party.sh
 python build.py
 
 # Run the tests.
-bash scripts/test.sh $@
+bash scripts/test.sh --omit_slow_tests $@
 
 # Set up a local dev instance
 # TODO(sll): Do this in a new shell.
