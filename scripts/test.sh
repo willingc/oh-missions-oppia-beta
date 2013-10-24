@@ -68,7 +68,7 @@ if [ $IS_COVERAGE_INSTALLED = 0 ]; then
 
   cd $TOOLS_DIR/coverage
   sudo python setup.py install
-  cd ../../../
+  cd ../../$EXPECTED_PWD
   sudo rm -rf $TOOLS_DIR/coverage
 fi
 
